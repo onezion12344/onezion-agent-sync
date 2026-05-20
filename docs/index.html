@@ -105,7 +105,7 @@
         Drop your entire AI agent environment onto any machine and watch it rebuild itself.
       </p>
 
-      <!-- Terminal -->
+      <!-- Animated Terminal Demo -->
       <div data-aos="fade-up" data-aos-delay="500" class="max-w-2xl mx-auto">
         <div class="bg-gray-900 rounded-xl border border-gray-700 shadow-2xl overflow-hidden">
           <div class="flex items-center gap-2 px-4 py-3 bg-gray-800/50 border-b border-gray-700">
@@ -113,21 +113,95 @@
             <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
             <div class="w-3 h-3 rounded-full bg-green-500"></div>
             <span class="ml-3 text-sm text-gray-400 font-mono">terminal</span>
+            <span class="ml-auto text-xs text-gray-600 cursor-pointer hover:text-gray-400" onclick="replayDemo()">replay</span>
           </div>
-          <div class="p-6 text-left">
-            <div class="font-mono text-sm space-y-2">
-              <p class="text-gray-400"># New machine. One command.</p>
-              <p><span class="text-green-400">$</span> <span class="text-white">python3 agentdropone-setup.py full-migration.zip</span></p>
-              <p class="text-gray-500 mt-3">Extracting bundle... <span class="text-green-400">done</span></p>
-              <p class="text-gray-500">Installing brew packages (183)... <span class="text-green-400">done</span></p>
-              <p class="text-gray-500">Restoring agent configs... <span class="text-green-400">done</span></p>
-              <p class="text-gray-500">Importing 24 secrets... <span class="text-green-400">done</span></p>
-              <p class="text-gray-500">Restoring login states... <span class="text-green-400">done</span></p>
-              <p class="text-green-400 font-bold mt-3">Setup complete! All 9 steps passed.</p>
-            </div>
+          <div class="p-6 text-left min-h-[280px]" id="terminal-demo">
+            <div class="font-mono text-sm" id="terminal-content"></div>
           </div>
         </div>
       </div>
+
+      <script>
+        const demoSteps = [
+          { text: '# New machine. One command.', delay: 300, cls: 'text-gray-500' },
+          { text: '$ python3 agentdropone-setup.py full-migration.zip', delay: 800, cls: '', type: true },
+          { text: '', delay: 400 },
+          { text: 'Extracting bundle...', delay: 600, cls: 'text-gray-400', result: '636 files', resultCls: 'text-green-400' },
+          { text: 'Reading metadata...', delay: 400, cls: 'text-gray-400', result: 'from MacBook Air', resultCls: 'text-gray-500' },
+          { text: 'Installing prerequisites...', delay: 500, cls: 'text-gray-400', result: 'brew, node, python3', resultCls: 'text-green-400' },
+          { text: 'Restoring workspace (183 brew, 28 npm)...', delay: 700, cls: 'text-gray-400', result: 'done', resultCls: 'text-green-400' },
+          { text: 'Installing agents...', delay: 600, cls: 'text-gray-400', result: '9 installed', resultCls: 'text-green-400' },
+          { text: 'Restoring agent configs...', delay: 500, cls: 'text-gray-400', result: 'done', resultCls: 'text-green-400' },
+          { text: 'Importing 24 secrets...', delay: 600, cls: 'text-gray-400', result: 'done', resultCls: 'text-green-400' },
+          { text: 'Restoring login states...', delay: 500, cls: 'text-gray-400', result: 'gh, fly, chrome', resultCls: 'text-green-400' },
+          { text: 'Verifying...', delay: 400, cls: 'text-gray-400', result: '9/9 passed', resultCls: 'text-green-400' },
+          { text: '', delay: 200 },
+          { text: 'Setup complete!', delay: 0, cls: 'text-green-400 font-bold' },
+        ];
+
+        function typeText(element, text, speed, callback) {
+          let i = 0;
+          const span = document.createElement('span');
+          element.appendChild(span);
+          function type() {
+            if (i < text.length) {
+              span.textContent += text[i];
+              i++;
+              setTimeout(type, speed);
+            } else if (callback) {
+              callback();
+            }
+          }
+          type();
+        }
+
+        async function runDemo() {
+          const container = document.getElementById('terminal-content');
+          container.innerHTML = '';
+
+          for (const step of demoSteps) {
+            const line = document.createElement('p');
+            line.className = step.cls || 'text-white';
+
+            if (step.text === '') {
+              line.innerHTML = '&nbsp;';
+              container.appendChild(line);
+              await new Promise(r => setTimeout(r, step.delay));
+              continue;
+            }
+
+            container.appendChild(line);
+
+            if (step.type) {
+              await new Promise(r => {
+                typeText(line, step.text, 35, r);
+              });
+            } else {
+              line.textContent = step.text;
+            }
+
+            if (step.result) {
+              await new Promise(r => setTimeout(r, 200));
+              const resultSpan = document.createElement('span');
+              resultSpan.className = step.resultCls || 'text-green-400';
+              resultSpan.textContent = `  ✓ ${step.result}`;
+              line.appendChild(resultSpan);
+            }
+
+            await new Promise(r => setTimeout(r, step.delay));
+
+            // Scroll terminal to bottom
+            container.scrollTop = container.scrollHeight;
+          }
+        }
+
+        function replayDemo() {
+          runDemo();
+        }
+
+        // Start demo when page loads (after AOS animation)
+        setTimeout(runDemo, 2000);
+      </script>
 
       <!-- CTA -->
       <div data-aos="fade-up" data-aos-delay="600" class="mt-10 flex flex-wrap gap-4 justify-center">
@@ -145,6 +219,25 @@
       <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
       </svg>
+    </div>
+  </section>
+
+  <!-- Demo Screenshots -->
+  <section class="py-20 px-6">
+    <div class="max-w-5xl mx-auto">
+      <h2 data-aos="fade-up" class="text-3xl font-bold mb-10 text-center">
+        See it in <span class="gradient-text">action</span>
+      </h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div data-aos="fade-right" class="rounded-xl overflow-hidden border border-gray-700 shadow-2xl">
+          <img src="assets/images/screenshot-hero.png" alt="AgentDropOne Hero" class="w-full" loading="lazy" />
+          <div class="p-3 bg-gray-900/50 text-center text-sm text-gray-400">Landing page with animated logo</div>
+        </div>
+        <div data-aos="fade-left" class="rounded-xl overflow-hidden border border-gray-700 shadow-2xl">
+          <img src="assets/images/screenshot-layers.png" alt="Three Layer Architecture" class="w-full" loading="lazy" />
+          <div class="p-3 bg-gray-900/50 text-center text-sm text-gray-400">Three-layer architecture visualization</div>
+        </div>
+      </div>
     </div>
   </section>
 

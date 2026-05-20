@@ -180,7 +180,14 @@ def cmd_watch(interval: int = 30):
 
 
 def cmd_apply():
-    """Apply changes from the sync folder (from another machine)."""
+    """Apply changes from the sync folder (from another machine).
+
+    Uses agent-driven conflict resolution:
+    - If no local file exists: apply directly
+    - If local file matches: skip (already up to date)
+    - If conflict detected: save both versions, generate CONFLICT.md
+      for the agent (or human) to resolve intelligently
+    """
     manifest_path = SYNC_DIR / "manifest.json"
     if not manifest_path.exists():
         print("No sync data found.")
@@ -189,6 +196,7 @@ def cmd_apply():
     manifest = _read_manifest()
     local_manifest = _read_local_state()
     applied = 0
+    conflicts = []
 
     for rel_path, info in manifest.get("files", {}).items():
         remote_hash = info.get("hash", "")
@@ -205,17 +213,73 @@ def cmd_apply():
         dst.parent.mkdir(parents=True, exist_ok=True)
 
         if info.get("sanitized"):
-            # Can't apply sanitized files directly, skip
             print(f"  Skipped (sanitized): {rel_path}")
             continue
 
-        shutil.copy2(src, dst)
-        local_manifest[rel_path] = {"hash": remote_hash, "applied_at": datetime.now(timezone.utc).isoformat()}
-        applied += 1
-        print(f"  Applied: {rel_path}")
+        if not dst.exists():
+            # No local file — apply directly
+            shutil.copy2(src, dst)
+            local_manifest[rel_path] = {"hash": remote_hash, "applied_at": datetime.now(timezone.utc).isoformat()}
+            applied += 1
+            print(f"  Applied: {rel_path}")
+        elif _file_hash(dst) != remote_hash:
+            # CONFLICT: local and remote both changed
+            conflicts.append({
+                "path": rel_path,
+                "remote_hash": remote_hash,
+                "local_hash": _file_hash(dst),
+                "remote_file": str(src),
+                "local_file": str(dst),
+            })
+            print(f"  CONFLICT: {rel_path} — saved both versions for agent resolution")
+        else:
+            # Remote is newer but content matches — just update hash
+            local_manifest[rel_path] = {"hash": remote_hash, "applied_at": datetime.now(timezone.utc).isoformat()}
+            applied += 1
 
     _save_local_state(local_manifest)
-    print(f"\n{applied} file(s) applied.")
+
+    if conflicts:
+        _generate_conflict_report(conflicts)
+        print(f"\n{applied} applied, {len(conflicts)} CONFLICTS — see {SYNC_DIR / 'CONFLICT.md'}")
+    else:
+        print(f"\n{applied} file(s) applied. No conflicts.")
+
+
+def _generate_conflict_report(conflicts: list[dict]):
+    """Generate a conflict report for the agent to resolve.
+
+    The agent reads this, compares both versions, and makes
+    an intelligent merge decision. If unsure, it asks the human.
+    """
+    lines = [
+        "# Sync Conflicts — Agent Resolution Required",
+        "",
+        f"Generated: {datetime.now(timezone.utc).isoformat()}",
+        f"Conflicts: {len(conflicts)}",
+        "",
+        "## Instructions for Agent",
+        "",
+        "For each conflict below:",
+        "1. Read both versions (remote and local)",
+        "2. Understand what each version changed",
+        "3. Merge intelligently: keep the best of both",
+        "4. If unsure, ask the human with context about what differs",
+        "",
+        "---",
+        "",
+    ]
+
+    for i, c in enumerate(conflicts, 1):
+        lines.append(f"## Conflict {i}: {c['path']}")
+        lines.append("")
+        lines.append(f"- Remote file: `{c['remote_file']}`")
+        lines.append(f"- Local file: `{c['local_file']}`")
+        lines.append(f"- Remote hash: `{c['remote_hash']}`")
+        lines.append(f"- Local hash: `{c['local_hash']}`")
+        lines.append("")
+
+    (SYNC_DIR / "CONFLICT.md").write_text("\n".join(lines))
 
 
 def cmd_status():

@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <!-- Gradient for the droplet -->
+    <linearGradient id="dropGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Gradient for the ripple -->
+    <radialGradient id="rippleGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:0.6" />
+      <stop offset="70%" style="stop-color:#764ba2;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:0" />
+    </radialGradient>
+
+    <!-- Glow filter -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle (the "surface") -->
+  <circle cx="100" cy="100" r="90" fill="none" stroke="#1a1a2e" stroke-width="2" opacity="0.5"/>
+
+  <!-- Ripple rings (expand from center) -->
+  <circle cx="100" cy="110" r="5" fill="none" stroke="url(#dropGrad)" stroke-width="2" opacity="0">
+    <animate attributeName="r" values="5;80" dur="1.5s" begin="1.2s" fill="freeze" />
+    <animate attributeName="opacity" values="0.8;0" dur="1.5s" begin="1.2s" fill="freeze" />
+    <animate attributeName="stroke-width" values="3;0.5" dur="1.5s" begin="1.2s" fill="freeze" />
+  </circle>
+
+  <circle cx="100" cy="110" r="5" fill="none" stroke="url(#dropGrad)" stroke-width="2" opacity="0">
+    <animate attributeName="r" values="5;85" dur="1.5s" begin="1.4s" fill="freeze" />
+    <animate attributeName="opacity" values="0.6;0" dur="1.5s" begin="1.4s" fill="freeze" />
+    <animate attributeName="stroke-width" values="2.5;0.3" dur="1.5s" begin="1.4s" fill="freeze" />
+  </circle>
+
+  <circle cx="100" cy="110" r="5" fill="none" stroke="url(#dropGrad)" stroke-width="2" opacity="0">
+    <animate attributeName="r" values="5;90" dur="1.5s" begin="1.6s" fill="freeze" />
+    <animate attributeName="opacity" values="0.4;0" dur="1.5s" begin="1.6s" fill="freeze" />
+    <animate attributeName="stroke-width" values="2;0.2" dur="1.5s" begin="1.6s" fill="freeze" />
+  </circle>
+
+  <!-- Surface spread (the "covering" effect) -->
+  <ellipse cx="100" cy="110" rx="0" ry="0" fill="url(#dropGrad)" opacity="0.15">
+    <animate attributeName="rx" values="0;90" dur="2s" begin="1.2s" fill="freeze" />
+    <animate attributeName="ry" values="0;90" dur="2s" begin="1.2s" fill="freeze" />
+    <animate attributeName="opacity" values="0.25;0.08" dur="2s" begin="1.2s" fill="freeze" />
+  </ellipse>
+
+  <!-- The droplet (falls from top) -->
+  <g filter="url(#glow)">
+    <!-- Droplet shape -->
+    <path d="M100,40 Q100,40 92,65 Q84,90 100,95 Q116,90 108,65 Q100,40 100,40 Z"
+          fill="url(#dropGrad)" opacity="0">
+      <animate attributeName="opacity" values="0;1" dur="0.3s" begin="0s" fill="freeze" />
+      <animateTransform attributeName="transform" type="translate" values="0,-30;0,0" dur="0.8s" begin="0.2s" fill="freeze" calcMode="spline" keySplines="0.2 0.8 0.3 1" />
+      <!-- Squash on impact -->
+      <animateTransform attributeName="transform" type="scale" values="1;1.3,0.5;0.8,1.1;1,1" dur="0.4s" begin="1s" fill="freeze" additive="sum" />
+    </path>
+
+    <!-- Highlight on droplet -->
+    <ellipse cx="96" cy="60" rx="4" ry="6" fill="white" opacity="0.4">
+      <animate attributeName="opacity" values="0;0.4" dur="0.3s" begin="0.3s" fill="freeze" />
+      <animateTransform attributeName="transform" type="translate" values="0,-30;0,0" dur="0.8s" begin="0.2s" fill="freeze" calcMode="spline" keySplines="0.2 0.8 0.3 1" />
+    </ellipse>
+  </g>
+
+  <!-- Impact splash particles -->
+  <g opacity="0">
+    <animate attributeName="opacity" values="0;1;0" dur="0.8s" begin="1s" fill="freeze" />
+
+    <circle cx="80" cy="110" r="2" fill="#667eea">
+      <animate attributeName="cx" values="80;40" dur="0.6s" begin="1s" fill="freeze" />
+      <animate attributeName="cy" values="110;100" dur="0.6s" begin="1s" fill="freeze" />
+      <animate attributeName="r" values="2;0" dur="0.6s" begin="1s" fill="freeze" />
+    </circle>
+    <circle cx="120" cy="110" r="2" fill="#764ba2">
+      <animate attributeName="cx" values="120;160" dur="0.6s" begin="1.05s" fill="freeze" />
+      <animate attributeName="cy" values="110;95" dur="0.6s" begin="1.05s" fill="freeze" />
+      <animate attributeName="r" values="2;0" dur="0.6s" begin="1.05s" fill="freeze" />
+    </circle>
+    <circle cx="95" cy="110" r="1.5" fill="#667eea">
+      <animate attributeName="cx" values="95;60" dur="0.5s" begin="1.1s" fill="freeze" />
+      <animate attributeName="cy" values="110;80" dur="0.5s" begin="1.1s" fill="freeze" />
+      <animate attributeName="r" values="1.5;0" dur="0.5s" begin="1.1s" fill="freeze" />
+    </circle>
+    <circle cx="108" cy="110" r="1.5" fill="#764ba2">
+      <animate attributeName="cx" values="108;145" dur="0.5s" begin="1.08s" fill="freeze" />
+      <animate attributeName="cy" values="110;82" dur="0.5s" begin="1.08s" fill="freeze" />
+      <animate attributeName="r" values="1.5;0" dur="0.5s" begin="1.08s" fill="freeze" />
+    </circle>
+  </g>
+
+  <!-- Text "AgentDropOne" that fades in after impact -->
+  <text x="100" y="155" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="16" fill="white" opacity="0">
+    <animate attributeName="opacity" values="0;1" dur="0.8s" begin="2s" fill="freeze" />
+    Agent<tspan fill="#667eea">Drop</tspan>One
+  </text>
+</svg>

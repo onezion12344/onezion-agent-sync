@@ -39,6 +39,11 @@ def main():
     p_orch = sub.add_parser("orchestrate", help="Auto-export from all agents with APIs, list manual steps")
     p_orch.add_argument("-o", "--output", help="Output directory", default=None)
 
+    # chat-export
+    p_chat = sub.add_parser("chat-export", help="Export conversation history from all agents")
+    p_chat.add_argument("-o", "--output", help="Output directory", default=None)
+    p_chat.add_argument("--agents", nargs="*", help="Specific agents (claude-code, hermes, workbuddy, openclaw, gemini)")
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -60,6 +65,8 @@ def main():
         cmd_discover()
     elif args.command == "orchestrate":
         cmd_orchestrate(args.output)
+    elif args.command == "chat-export":
+        cmd_chat_export(args.output, args.agents)
     else:
         parser.print_help()
 
@@ -251,6 +258,23 @@ def cmd_orchestrate(output_dir):
     (out / "discovery-report.json").write_text(report.to_json())
     print(f"\nFull report: {out / 'discovery-report.json'}")
     print(f"Export directory: {out}")
+
+
+def cmd_chat_export(output, agents):
+    from .chat_export import export_all_chats, generate_index
+    from pathlib import Path
+
+    out = Path(output) if output else Path.home() / "Desktop" / "chat-export"
+    out.mkdir(parents=True, exist_ok=True)
+
+    print(f"\nExporting chat history to: {out}\n")
+    results = export_all_chats(out, agents)
+    generate_index(results, out)
+
+    total = sum(len(s) for s in results.values())
+    size = sum(sum(s.size_bytes for s in sess) for sess in results.values())
+    print(f"\nTotal: {total} sessions ({size / 1024 / 1024:.1f} MB)")
+    print(f"Index: {out / 'INDEX.md'}")
 
 
 if __name__ == "__main__":

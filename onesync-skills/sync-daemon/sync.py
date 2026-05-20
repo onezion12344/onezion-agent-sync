@@ -41,6 +41,10 @@ def _find_sync_dir() -> Path:
 
 SYNC_DIR = _find_sync_dir()
 
+# rclone remote name (user configures this)
+# Supports: OneDrive, Google Drive, Dropbox, S3, B2, WebDAV, etc.
+RCLONE_REMOTE = os.environ.get("ONEZION_SYNC_REMOTE", "")  # e.g. "onedrive:onezion-sync"
+
 # Files to watch (relative to HOME)
 WATCH_TARGETS = [
     # (relative_path, is_dir, sanitize)
@@ -248,10 +252,89 @@ def _save_local_state(state: dict):
     (SYNC_DIR / ".local-state.json").write_text(json.dumps(state, indent=2))
 
 
+# ── rclone gateway ─────────────────────────────────────────
+
+def _get_rclone_remote() -> str:
+    """Get rclone remote from env, config, or auto-detect."""
+    if RCLONE_REMOTE:
+        return RCLONE_REMOTE
+
+    # Check config file
+    config_file = SYNC_DIR / "rclone-remote.txt"
+    if config_file.exists():
+        return config_file.read_text().strip()
+
+    # Auto-detect: check if OneDrive is available
+    od_path = HOME / "Library/CloudStorage/OneDrive-Personal"
+    if od_path.exists():
+        return ""  # Use local OneDrive folder directly
+
+    return ""
+
+
+def cmd_push():
+    """Push local sync folder to cloud storage via rclone."""
+    remote = _get_rclone_remote()
+    if not remote:
+        print("No rclone remote configured.")
+        print("Set ONEZION_SYNC_REMOTE env var or create ~/.onezion-sync/rclone-remote.txt")
+        print("Examples:")
+        print("  export ONEZION_SYNC_REMOTE='onedrive:onezion-sync'")
+        print("  export ONEZION_SYNC_REMOTE='gdrive:onezion-sync'")
+        print("  export ONEZION_SYNC_REMOTE='dropbox:onezion-sync'")
+        print("  export ONEZION_SYNC_REMOTE='b2:my-bucket/onezion-sync'")
+        return
+
+    print(f"Pushing to {remote}...")
+    cmd = f"rclone sync '{SYNC_DIR}' '{remote}' --progress"
+    r = subprocess.run(cmd, shell=True, timeout=120)
+    if r.returncode == 0:
+        print("Push complete.")
+    else:
+        print("Push failed. Check rclone config.")
+
+
+def cmd_pull():
+    """Pull from cloud storage to local sync folder via rclone."""
+    remote = _get_rclone_remote()
+    if not remote:
+        print("No rclone remote configured. Use 'push --setup' first.")
+        return
+
+    print(f"Pulling from {remote}...")
+    SYNC_DIR.mkdir(parents=True, exist_ok=True)
+    cmd = f"rclone sync '{remote}' '{SYNC_DIR}' --progress"
+    r = subprocess.run(cmd, shell=True, timeout=120)
+    if r.returncode == 0:
+        print("Pull complete. Run 'apply' to restore configs.")
+    else:
+        print("Pull failed. Check rclone config.")
+
+
+def cmd_setup_remote(remote: str):
+    """Configure rclone remote for sync."""
+    SYNC_DIR.mkdir(parents=True, exist_ok=True)
+    config_file = SYNC_DIR / "rclone-remote.txt"
+    config_file.write_text(remote)
+    print(f"Configured sync remote: {remote}")
+    print(f"Saved to: {config_file}")
+
+    # Test connection
+    print("Testing connection...")
+    r = subprocess.run(f"rclone lsd '{remote}' 2>&1 | head -5", shell=True, capture_output=True, text=True)
+    if r.returncode == 0:
+        print("Connection OK!")
+    else:
+        print(f"Connection test: {r.stdout[:200]}")
+
+
 # ── CLI ────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="onezion-sync: Config sync via cloud storage")
+    parser = argparse.ArgumentParser(
+        description="onezion-sync: Config sync via cloud storage gateway",
+        epilog="Supports 40+ providers via rclone: OneDrive, Google Drive, Dropbox, S3, B2, WebDAV, etc."
+    )
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("snapshot", help="Take a one-time snapshot of all configs")
@@ -259,6 +342,10 @@ def main():
     p_watch.add_argument("--interval", type=int, default=30, help="Check interval in seconds")
     sub.add_parser("apply", help="Apply incoming changes from other machine")
     sub.add_parser("status", help="Show sync status")
+    sub.add_parser("push", help="Push to cloud storage via rclone")
+    sub.add_parser("pull", help="Pull from cloud storage via rclone")
+    p_setup = sub.add_parser("setup-remote", help="Configure cloud storage provider")
+    p_setup.add_argument("remote", help="rclone remote (e.g. 'onedrive:onezion-sync', 'gdrive:onezion-sync')")
 
     args = parser.parse_args()
 
@@ -270,6 +357,12 @@ def main():
         cmd_apply()
     elif args.command == "status":
         cmd_status()
+    elif args.command == "push":
+        cmd_push()
+    elif args.command == "pull":
+        cmd_pull()
+    elif args.command == "setup-remote":
+        cmd_setup_remote(args.remote)
     else:
         parser.print_help()
 

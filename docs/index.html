@@ -402,12 +402,20 @@
     </div>
   </section>
 
+  <!-- Animation Toggle -->
+  <div id="anim-toggle" class="fixed bottom-6 right-6 z-50">
+    <button onclick="toggleAnimations()" class="px-4 py-2 bg-gray-800/80 backdrop-blur-sm border border-gray-600 rounded-full text-sm text-gray-300 hover:text-white hover:border-purple-500 transition-all" title="Pause/Resume animations">
+      <span id="anim-icon">⏸</span> <span id="anim-label">Pause</span>
+    </button>
+  </div>
+
   <!-- Footer -->
   <footer class="py-16 px-6 border-t border-gray-800">
     <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
       <div>
         <span class="text-2xl font-bold">Agent<span class="gradient-text">Drop</span>One</span>
         <p class="text-sm text-gray-500 mt-1">One zip. One command. Full agent workspace.</p>
+        <p class="text-xs text-gray-600 mt-2">Made with love by Harry OneZion</p>
       </div>
       <div class="flex gap-6">
         <a href="https://github.com/onezion12344/AgentDropOne" class="text-gray-400 hover:text-white transition-colors">GitHub</a>
@@ -418,11 +426,55 @@
   </footer>
 
   <script>
+    // Initialize AOS with pause/resume support
     AOS.init({
       duration: 800,
       easing: 'ease-out-cubic',
       once: true,
       offset: 50,
+      startEvent: 'DOMContentLoaded',
+    });
+
+    // Track animation state
+    let animationsPaused = false;
+
+    function toggleAnimations() {
+      animationsPaused = !animationsPaused;
+      const icon = document.getElementById('anim-icon');
+      const label = document.getElementById('anim-label');
+
+      if (animationsPaused) {
+        // Pause: disable AOS and freeze all animated elements in current state
+        document.querySelectorAll('[data-aos]').forEach(el => {
+          const computed = getComputedStyle(el);
+          el.style.transition = 'none';
+          el.style.opacity = computed.opacity;
+          el.style.transform = computed.transform;
+        });
+        icon.textContent = '▶';
+        label.textContent = 'Resume';
+      } else {
+        // Resume: re-enable AOS and let it recalculate
+        document.querySelectorAll('[data-aos]').forEach(el => {
+          el.style.transition = '';
+          el.style.opacity = '';
+          el.style.transform = '';
+        });
+        // Refresh AOS to recalculate positions
+        AOS.refreshHard();
+        icon.textContent = '⏸';
+        label.textContent = 'Pause';
+      }
+    }
+
+    // Keyboard shortcut: press 'a' to toggle animations
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tag = document.activeElement.tagName.toLowerCase();
+        if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
+          toggleAnimations();
+        }
+      }
     });
   </script>
 

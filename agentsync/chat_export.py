@@ -438,53 +438,6 @@ def export_mavis(output_dir: Path) -> list[ChatSession]:
 
 # ── Main export function ───────────────────────────────────
 
-def export_cc_switch(output_dir: Path) -> list[ChatSession]:
-    """Export CC Switch configs, database, and skills."""
-    sessions = []
-    dest = output_dir / "cc-switch"
-    dest.mkdir(parents=True, exist_ok=True)
-
-    base = HOME / ".cc-switch"
-    if not base.exists():
-        return sessions
-
-    # Export settings.json
-    settings = base / "settings.json"
-    if settings.exists():
-        shutil.copy2(settings, dest / "settings.json")
-        sessions.append(ChatSession(
-            agent="cc-switch", session_id="settings.json",
-            size_bytes=settings.stat().st_size,
-        ))
-
-    # Export SQLite database (provider configs, usage data, session history)
-    db = base / "cc-switch.db"
-    if db.exists():
-        shutil.copy2(db, dest / "cc-switch.db")
-        sessions.append(ChatSession(
-            agent="cc-switch", session_id="cc-switch.db",
-            size_bytes=db.stat().st_size,
-        ))
-
-    # Export skills directory
-    skills = base / "skills"
-    if skills.exists() and any(skills.iterdir()):
-        dest_skills = dest / "skills"
-        shutil.copytree(skills, dest_skills, dirs_exist_ok=True)
-        count = len(list(skills.rglob("*")))
-        sessions.append(ChatSession(
-            agent="cc-switch", session_id=f"skills ({count} items)",
-        ))
-
-    # Export backups (provider configs)
-    backups = base / "backups"
-    if backups.exists():
-        dest_backups = dest / "backups"
-        shutil.copytree(backups, dest_backups, dirs_exist_ok=True)
-
-    return sessions
-
-
 EXPORTERS = {
     "claude-code": export_claude_code,
     "claude-desktop-3p": export_claude_desktop_3p,
@@ -499,7 +452,6 @@ EXPORTERS = {
     "cherrystudio": export_cherrystudio,
     "anythingllm": export_anythingllm,
     "mavis": export_mavis,
-    "cc-switch": export_cc_switch,
 }
 
 

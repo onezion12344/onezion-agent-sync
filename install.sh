@@ -342,8 +342,19 @@ main() {
             exit 0
             ;;
         --update)
-            clone_agentdropone
-            ok "Updated to latest version"
+            info "Checking for updates..."
+            cd "$INSTALL_DIR" 2>/dev/null || { clone_agentdropone; }
+            # Check latest tag on GitHub
+            LATEST=$(curl -s https://api.github.com/repos/onezion12344/AgentDropOne/tags | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['name'])" 2>/dev/null)
+            CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+            if [ "$LATEST" != "$CURRENT" ] && [ -n "$LATEST" ]; then
+                info "Updating from $CURRENT to $LATEST..."
+                git fetch --tags --quiet 2>/dev/null
+                git checkout "$LATEST" --quiet 2>/dev/null
+                ok "Updated to $LATEST"
+            else
+                ok "Already up to date ($CURRENT)"
+            fi
             exit 0
             ;;
         --help|-h)
@@ -352,7 +363,8 @@ main() {
             echo "  install.sh bundle.zip               Install + setup from bundle"
             echo "  install.sh --docker-pack            Pack as Docker image"
             echo "  install.sh --docker-unpack=image    Unpack from Docker image"
-            echo "  install.sh --update                 Update to latest"
+            echo "  install.sh --update                 Check & update to latest version"
+            echo "  install.sh --auto                   Non-interactive: auto-export bundle"
             echo ""
             exit 0
             ;;
@@ -368,48 +380,44 @@ main() {
     echo -e "${GREEN}  ╚═══════════════════════════════════════╝${NC}"
     echo ""
 
-    if [ -n "$BUNDLE" ]; then
+    if [ -n "$BUNDLE" ] && [ "$BUNDLE" != "--auto" ]; then
         run_bundle "$BUNDLE"
     else
-        # No bundle — this is probably the OLD machine. Auto-export.
+        # Ask what to do
         echo ""
-        info "No bundle provided. Let's create one!"
+        echo "  What would you like to do?"
         echo ""
-        echo "  This will scan your machine and export everything:"
-        echo "  - All API keys and secrets"
-        echo "  - All agent configs (Claude Code, Hermes, OpenClaw...)"
-        echo "  - All conversation history"
-        echo "  - Browser cookies and login states"
+        echo "    1) Restore from a bundle   (I have a bundle.zip)"
+        echo "    2) Create a new bundle     (export this machine)"
+        echo "    3) Just install the tool   (I'll use it later)"
         echo ""
+        read -r -p "  Choose [1/2/3] " answer
 
-        read -r -p "  Create migration bundle now? [Y/n] " answer
-        answer="${answer:-y}"
-
-        if [[ "$answer" =~ ^[Yy] ]]; then
-            BUNDLE_PATH="$HOME/Desktop/agentdropone-bundle.zip"
-            echo ""
-            info "Creating bundle at $BUNDLE_PATH..."
-            cd "$INSTALL_DIR"
-            python3 onesync-skills/full-migrate/agentdropone-setup.py "$BUNDLE_PATH" --export 2>/dev/null || {
-                # If --export not supported, run orchestrator
-                python3 -m agentsync.cli orchestrate -o /tmp/agentdropone-export
+        case "$answer" in
+            1)
+                read -r -p "  Path to bundle: " bundle_path
+                if [ -f "$bundle_path" ]; then
+                    run_bundle "$bundle_path"
+                else
+                    err "Bundle not found: $bundle_path"
+                fi
+                ;;
+            2)
+                echo ""
+                info "Creating bundle from this machine..."
+                echo ""
+                cd "$INSTALL_DIR"
+                BUNDLE_PATH="$HOME/Desktop/agentdropone-bundle.zip"
+                python3 -m agentsync.cli orchestrate -o /tmp/agentdropone-export 2>/dev/null
+                python3 -m agentsync.cli chat-export -o /tmp/agentdropone-export/chat-history 2>/dev/null
                 cd /tmp && zip -r "$BUNDLE_PATH" agentdropone-export/ >/dev/null 2>&1
-            }
-            echo ""
-            ok "Bundle created: $BUNDLE_PATH"
-            echo ""
-            echo "  Transfer this file to your new machine, then run:"
-            echo "    install.sh $BUNDLE_PATH"
-            echo ""
-            echo "  Or send it to yourself (OneDrive, AirDrop, email, USB...)"
-        else
-            echo ""
-            echo "  Manual export later:"
-            echo "    cd ~/.agentdropone"
-            echo "    python3 -m agentsync.cli export-secrets -o secrets.json"
-            echo "    python3 -m agentsync.cli chat-export -o ~/Desktop/chats"
-            echo "    python3 -m agentsync.cli discover"
-        fi
+                rm -rf /tmp/agentdropone-export
+                ok "Bundle created: $BUNDLE_PATH"
+                ;;
+            3)
+                info "Tool installed. Run later with: install.sh bundle.zip"
+                ;;
+        esac
     fi
 }
 

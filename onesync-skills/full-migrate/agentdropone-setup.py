@@ -601,8 +601,21 @@ def main():
         if api_key:
             _start_nanobot(api_key, str(bundle), args.dry_run)
         else:
-            print("\n  No API key found in bundle. Falling back to deterministic mode.")
-            use_nanobot = False
+            print("\n  No API key found in the bundle.")
+            print("  Nanobot needs an API key to run (OpenRouter, DeepSeek, or Anthropic).")
+            print("  You can get a free OpenRouter key at: https://openrouter.ai/keys")
+            print()
+            try:
+                sys.stdout.write("  Paste your API key (or press Enter to skip): ")
+            sys.stdout.flush()
+            user_key = open("/dev/tty").readline().strip()
+            except (EOFError, KeyboardInterrupt):
+                user_key = ""
+            if user_key and len(user_key) > 10:
+                _start_nanobot(user_key, str(bundle), args.dry_run)
+            else:
+                print("\n  No key provided. Falling back to deterministic mode.")
+                use_nanobot = False
 
     if not use_nanobot:
         agent = MiniAgent(str(bundle), dry_run=args.dry_run)

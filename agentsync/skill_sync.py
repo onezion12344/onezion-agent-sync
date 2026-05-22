@@ -147,6 +147,80 @@ def run_sync(full: bool = False):
 
     _log(f"Sync done: {total['synced']} synced, {total['conflicts']} conflicts")
 
+    # If any skills changed, sync bundle to OneDrive
+    if total["synced"] > 0:
+        _sync_bundle_to_onedrive()
+
+
+# ── OneDrive bundle sync ───────────────────────────────────
+
+ONEDRIVE_BUNDLE_DIR = HOME / "Library/CloudStorage/OneDrive-Personal/AgentDropOne"
+ONEDRIVE_SKILLS_DIR = ONEDRIVE_BUNDLE_DIR / "skills"
+
+
+def _sync_bundle_to_onedrive():
+    """Push local skill changes to OneDrive bundle. Pull remote changes back."""
+    if not ONEDRIVE_BUNDLE_DIR.exists():
+        _log("  OneDrive bundle dir not found, skipping remote sync")
+        return
+
+    ONEDRIVE_SKILLS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Push: copy skills to OneDrive bundle for other machines
+    pushed = 0
+    for name, info in SKILL_SOURCES.items():
+        if not info["active"] or not info["path"].exists():
+            continue
+
+        for skill_dir in info["path"].iterdir():
+            if not skill_dir.is_dir() or skill_dir.name.startswith("."):
+                continue
+
+            remote_dir = ONEDRIVE_SKILLS_DIR / skill_dir.name
+            if not remote_dir.exists():
+                shutil.copytree(skill_dir, remote_dir)
+                pushed += 1
+            else:
+                # Compare times
+                src_mtime = max(
+                    (f.stat().st_mtime for f in skill_dir.rglob("*") if f.is_file()),
+                    default=0,
+                )
+                rmt_mtime = max(
+                    (f.stat().st_mtime for f in remote_dir.rglob("*") if f.is_file()),
+                    default=0,
+                )
+                if src_mtime > rmt_mtime + 1:
+                    shutil.copytree(skill_dir, remote_dir, dirs_exist_ok=True)
+                    pushed += 1
+                elif rmt_mtime > src_mtime + 1:
+                    # Pull: OneDrive has newer version (from another machine)
+                    shutil.copytree(remote_dir, skill_dir, dirs_exist_ok=True)
+                    pushed += 1
+                    _log(f"  ⇄ pulled {skill_dir.name} from OneDrive")
+                    # Also push to other agents
+                    for other_name, other_info in SKILL_SOURCES.items():
+                        if other_name != name and other_info["active"]:
+                            other_target = other_info["path"] / skill_dir.name
+                            if other_target.exists():
+                                shutil.copytree(remote_dir, other_target, dirs_exist_ok=True)
+
+    if pushed > 0:
+        # Trigger snapshot of config files too (via sync-daemon)
+        _log(f"  Bundle updated: {pushed} skills synced to OneDrive")
+
+        # Try to run snapshot if sync-daemon is available
+        sync_py = Path(__file__).parent.parent / "onesync-skills/sync-daemon/sync.py"
+        if sync_py.exists():
+            try:
+                subprocess.run(
+                    [sys.executable, str(sync_py), "snapshot"],
+                    capture_output=True, timeout=30,
+                )
+                _log(f"  Config snapshot updated in OneDrive")
+            except:
+                pass
+
 
 def setup_cron(interval: str = "daily"):
     """Install as a cron job."""

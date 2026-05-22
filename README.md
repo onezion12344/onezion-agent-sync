@@ -11,10 +11,16 @@
 ### One-Click Install
 
 ```bash
+# Fast (curl pipe):
 curl -sSL https://raw.githubusercontent.com/onezion12344/AgentDropOne/main/install.sh | bash
+
+# Safe (inspect first):
+curl -sSL https://raw.githubusercontent.com/onezion12344/AgentDropOne/main/install.sh -o install.sh
+less install.sh     # read it first
+bash install.sh
 ```
 
-That's it. Detects your OS, installs prerequisites, clones AgentDropOne, and asks if you want to create or restore a bundle.
+Detects your OS, installs prerequisites, clones AgentDropOne, and asks if you want to create or restore a bundle.
 
 ---
 

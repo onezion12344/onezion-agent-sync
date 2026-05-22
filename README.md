@@ -2,193 +2,128 @@
 
 # AgentDropOne
 
-**One zip. One command. Full agent workspace.**
+### One zip. One command. Full agent workspace.
 
 *Drop your entire AI agent environment onto any machine and watch it rebuild itself.*
 
+---
+
+### One-Click Install
+
+```bash
+curl -sSL https://raw.githubusercontent.com/onezion12344/AgentDropOne/main/install.sh | bash
+```
+
+That's it. Detects your OS, installs prerequisites, clones AgentDropOne, and asks if you want to create or restore a bundle.
+
+---
+
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![v0.5.1](https://img.shields.io/badge/version-0.5.1-purple.svg)](https://github.com/onezion12344/AgentDropOne/tags)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Also on ClawHub](https://img.shields.io/badge/ClawHub-ready-ff69b4.svg)](https://clawhub.ai)
 
-<br>
-
-**Made with love by Harry OneZion**
-
-<br>
-
 [![Landing Page](https://img.shields.io/badge/Landing%20Page-%20→-8A2BE2)](https://onezion12344.github.io/AgentDropOne/)
-[![Notion Plan](https://img.shields.io/badge/Product%20Plan-%20→-lightgrey)](https://www.notion.so/Current-Product-Plan-366d45f5ce6b808990c3cd0a27c02a2e)
+
+Made with love by Harry OneZion
 
 </div>
 
 ---
 
-## One-Line Install
+## Usage
+
+### New machine (restore)
 
 ```bash
-# Any Mac or Linux machine:
-curl -sSL https://raw.githubusercontent.com/onezion12344/AgentDropOne/main/install.sh | bash
+curl -sSL https://.../install.sh | bash -s -- bundle.zip
+```
 
-# With a bundle (full restore):
-curl -sSL https://raw.githubusercontent.com/onezion12344/AgentDropOne/main/install.sh | bash -s -- bundle.zip
+Auto-detects OS → installs Python/Node/Git → extracts bundle → asks:
 
-# Windows (PowerShell):
+> *Would you like to start Nanobot as your bootstrap agent?* [y/N]
+
+- **y** = Nanobot reads bundle, intelligently guides setup (auto-grabs API key)
+- **n** = 9-step deterministic pipeline (no AI needed)
+
+### Old machine (export)
+
+```bash
+curl -sSL https://.../install.sh | bash
+# → No bundle? Let's create one!
+# → Scans all agents, exports 24 secrets, copies configs
+# → Saves to Desktop/agentdropone-bundle.zip
+```
+
+### Windows
+
+```powershell
 irm https://raw.githubusercontent.com/onezion12344/AgentDropOne/main/install.ps1 | iex
 ```
 
-No bundle? The installer **auto-detects your OS** and offers to create one from your current machine.
+---
+
+## What's in the bundle
+
+```
+agentdropone-bundle.zip (~224 MB)
+├── workspace-manifest.json    183 brew, 31 npm, 565 pip, git, SSH, Docker
+├── secrets-export.json         24 API keys (auto-discovered)
+├── hermes/backup.zip           Auto-exported via CLI
+├── openclaw/backup.zip         Auto-exported via CLI
+├── claude-code/                Full configs + 190 skills + memory
+├── gemini-cli/                 Firebase configs
+├── chat-history/               913 sessions from 13 agents
+├── cookie-migration.zip        gh, fly, superhuman, rclone, Chrome
+└── meta.json
+```
 
 ---
 
-## What it does
+## Daily Sync
 
-AgentDropOne is a **self-bootstrapping migration tool** for AI agent workspaces.
-
+Runs automatically every hour:
 ```
-┌────────────────────────────────────────────────────────────┐
-│  One zip. Three layers. Thirteen agents. Full workspace.   │
-│                                                            │
-│  Layer 1: Workspace     Layer 2: Agents     Layer 3: Auth │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │ brew  183    │  │ 24 API keys  │  │ GitHub CLI   │    │
-│  │ npm   31     │  │ 13 agents    │  │ Fly.io       │    │
-│  │ pip   565    │  │ 364 skills   │  │ Superhuman   │    │
-│  │ git + SSH    │  │ MCP servers  │  │ Chrome       │    │
-│  │ Docker       │  │ Memory       │  │ rclone       │    │
-│  └──────────────┘  └──────────────┘  └──────────────┘    │
-│                                                            │
-│        →  agentdropone-bundle.zip (224 MB)  →             │
-└────────────────────────────────────────────────────────────┘
+Claude Code ←→ WorkBuddy ←→ Hermes ←→ OneDrive
 ```
 
-On a new machine, it asks:
+First run: **364 skills synced, 0 conflicts**.
 
+```bash
+python3 -m agentsync.skill_sync              # Manual run
+python3 -m agentsync.skill_sync --install-launchd  # Install hourly
 ```
-  Would you like to start Nanobot as your bootstrap agent?
-  Nanobot is a lightweight AI agent (HKUDS, 42KB) that can
-  intelligently guide you through the setup process.
-
-    y = Start Nanobot (auto-grabs API key from bundle)
-    n = Deterministic mode (9 automated steps)
-
-  Start Nanobot? [y/N]
-```
-
-**Nanobot** is embedded inside AgentDropOne (2.2MB). It reads the bundle, understands the context, and intelligently orchestrates the setup — no need for a separate agent.
 
 ---
 
-## Daily Automated Sync
+## CLI Reference
 
-```
-Claude Code (190 skills) ←→ WorkBuddy (170) ←→ Hermes (200)
-        ↑                      ↑                    ↑
-        └──────────────────────┴────────────────────┘
-                   Hourly LaunchAgent
-                         ↓
-         OneDrive AgentDropOne/ bidirectional
-           (push/pull to/from other machines)
-```
-
-Runs automatically every hour. First run: **364 skills synced, 0 conflicts**. Any change you make in one agent appears in all others — and syncs to OneDrive for your other machines.
-
----
-
-## Quick Reference
-
-| Command | What it does |
-|---------|-------------|
-| `install.sh` | One-line install, auto-detects OS |
-| `python3 agentdropone-setup.py bundle.zip` | Full restore on new machine |
-| `python3 agentdropone-setup.py bundle.zip --agent` | Restore with Nanobot AI guide |
-| `python3 -m agentsync.cli scan` | Discover all secrets (24 keys) |
-| `python3 -m agentsync.cli export-secrets` | Export keys to JSON |
+| Command | Does |
+|---------|------|
+| `install.sh` | One-click full install |
+| `python3 -m agentsync.cli scan` | Discover all secrets |
 | `python3 -m agentsync.cli chat-export` | Export 913 sessions from 13 agents |
 | `python3 -m agentsync.cli discover` | Scan installed agents |
-| `python3 -m agentsync.cli orchestrate` | Auto-export from all agents |
-| `python3 -m agentsync.skill_sync` | Sync skills across agents |
-| `python3 -m agentsync.skill_sync --install-launchd` | Install hourly auto-sync |
-| `python3 sync.py snapshot` | Config snapshot to cloud |
-| `python3 sync.py watch` | Real-time config monitoring |
-| `python3 sync.py push/pull` | Rclone gateway (40+ providers) |
+| `python3 -m agentsync.cli orchestrate` | Auto-export all agents |
+| `python3 -m agentsync.cli docs --all` | Discover agent configs from GitHub |
 
 ---
 
 ## Architecture
 
 ```
-AgentDropOne/
-├── agentsync/                 # Core engine
-│   ├── secrets.py             # 24+ API keys from 5 sources
-│   ├── orchestrator.py        # Agent orchestration
-│   ├── registry.py            # 12 agents with export methods
-│   ├── chat_export.py         # 13-agent conversation export (913 sessions)
-│   ├── skill_sync.py          # Hourly bidirectional skill sync
-│   ├── docs.py                # GitHub docs crawler
-│   └── cli.py                 # CLI: scan, export, import, docs, discover, orchestrate, chat-export
-├── lib/nanobot/               # HKUDS bootstrap mini-agent (2.2MB, 164 files)
-├── onesync-skills/            # Independent skills
-│   ├── workspace-setup/       # brew/npm/pip/git/SSH/Docker
-│   ├── cookie-manager/        # Browser cookies + OAuth tokens
-│   ├── sync-daemon/           # Config sync via cloud storage
-│   └── full-migrate/          # Bundler + setup.py + Nanobot bootstrap
-├── docs/                      # GitHub Pages landing page
-├── install.sh                 # Bash one-line installer
-├── install.ps1                # Windows PowerShell installer
-├── SKILL.md                   # Agent-readable skill file
-└── pyproject.toml
+lib/nanobot/          HKUDS bootstrap mini-agent (2.2MB)
+agentsync/            Secrets, orchestrator, sync, chat-export, docs
+onesync-skills/       workspace-setup, cookie-manager, sync-daemon, full-migrate
+install.sh             Bash one-click installer
+install.ps1            Windows PowerShell installer
+docs/                  GitHub Pages landing page
 ```
 
-## Supported Agents
-
-| Agent | Auto-Export | Config Path |
-|-------|------------|-------------|
-| Hermes Agent | `hermes backup` | `~/.hermes/config.yaml` |
-| OpenClaw | `openclaw backup create` | `~/.openclaw/openclaw.json` |
-| Claude Code | Manual | `~/.claude/settings.json` |
-| Claude Desktop | Manual | `~/Library/Application Support/Claude/` |
-| Gemini CLI | Manual | `~/.gemini/settings.json` |
-| OpenAI Codex | Manual | `~/.codex/config.toml` |
-| WorkBuddy | Manual | `~/.workbuddy/mcp.json` |
-| Goose | Manual | `~/.config/goose/config.yaml` |
-| OpenCode | Manual | `~/.config/opencode/opencode.json` |
-| CC Switch | Manual | `~/.cc-switch/settings.json` |
+Agent-first. Not script-first. Skills work on any agent that runs Python.
 
 ---
-
-## Philosophy
-
-> **Glue code, done right. Agent-first, not script-first.**
-
-AgentDropOne doesn't rebuild what exists. It connects:
-- **rclone** for cloud storage (40+ providers)
-- **Nanobot (HKUDS)** for intelligent bootstrap
-- **Hermes/OpenClaw** native backup for agent data
-- **macOS Keychain** for secret storage
-- **GitHub** for documentation discovery
-
-Skills are universal — any agent that runs Python can use them.
-Conflict resolution is **agent-driven**, not timestamp-based.
-
----
-
-## Requirements
-
-- Python 3.9+ (zero dependencies beyond stdlib)
-- macOS / Linux / Windows (WSL)
-- Cloud storage (OneDrive, Google Drive, Dropbox, or rclone)
 
 ## License
 
 MIT — Made with love by Harry OneZion
-
----
-
-<div align="center">
-
-**[Landing Page](https://onezion12344.github.io/AgentDropOne/)** · **[Documentation](SKILL.md)** · **[Issues](https://github.com/onezion12344/AgentDropOne/issues)** · **[Tags](https://github.com/onezion12344/AgentDropOne/tags)**
-
-*Drop one zip, get your whole world back.*
-
-</div>
